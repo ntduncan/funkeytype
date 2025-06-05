@@ -7,6 +7,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/timer"
 	"github.com/charmbracelet/lipgloss"
 	"ntduncan.com/typer/styles"
 	"ntduncan.com/typer/utils"
@@ -26,18 +27,27 @@ type TypeTest struct {
 	StartTime  time.Time
 	EndTime    time.Time
 	Size       int
+	Mode       utils.TestMode
+	TestTimer  timer.Model
 }
 
-func New(length int) TypeTest {
+func New(size int, mode utils.TestMode) TypeTest {
 	testString := strings.Builder{}
-	for i := 0; i < length; i++ {
+
+	testLen := size
+
+	if mode == utils.TimeTest {
+		testLen = 150
+	}
+
+	for i := 0; i < testLen; i++ {
 		err, word := utils.GetWordFromList(rand.Intn(1000))
 		if err != nil {
 			i--
 			continue
 		}
 
-		if i == (length - 1) {
+		if i == (testLen - 1) {
 			testString.WriteString(word)
 		} else {
 			testString.WriteString(word + " ")
@@ -45,12 +55,17 @@ func New(length int) TypeTest {
 
 	}
 
+	timeout := time.Second * time.Duration(size)
+	theTimer := timer.NewWithInterval(timeout, time.Second)
+
 	return TypeTest{
 		TestString: testString.String(),
 		Params:     initNewTest(testString.String()),
 		StartTime:  time.Time{},
 		EndTime:    time.Time{},
-		Size:       length,
+		Size:       size,
+		Mode:       mode,
+		TestTimer:  theTimer,
 	}
 
 }
@@ -76,6 +91,7 @@ func (tt *TypeTest) HandleKeyPress(key string, index int) {
 	if tt.StartTime.IsZero() {
 		tt.StartTest()
 	}
+
 	tt.Params[index].Input = key
 	if key == tt.Params[index].Char {
 		tt.Params[index].IsValid = true
@@ -89,7 +105,6 @@ func (tt *TypeTest) HandleKeyPress(key string, index int) {
 
 func (tt *TypeTest) StartTest() {
 	tt.StartTime = time.Now()
-
 }
 
 func (tt *TypeTest) EndTest() {
@@ -103,28 +118,52 @@ func (tt *TypeTest) GetWPM() string {
 
 	numOfErrs := 0
 	for _, i := range tt.Params {
+		if tt.Mode == utils.TimeTest && i.Input == "" {
+			break
+		}
+
 		if !i.IsValid {
 			numOfErrs++
 		}
 	}
 
-	length := len(tt.Params) / 5
+	var wpm string
+	errDeduction := float64(numOfErrs / 60.0)
+	length := 0
+
+	if tt.Mode == utils.TimeTest {
+		for _, param := range tt.Params {
+			if param.Input != "" {
+				length++
+			} else {
+				break
+			}
+		}
+		length = length / 5
+
+	} else {
+		length = len(tt.Params) / 5
+	}
+
 	timeDelta := tt.EndTime.Sub(tt.StartTime).Seconds()
 
-	errDeduction := float64(numOfErrs / 60.0)
-
 	// WPM = (number of words / time in minutes)
-	wpm := fmt.Sprintf("%.2f", ((float64(length) - errDeduction) / (timeDelta / 60.0)))
-
+	wpm = fmt.Sprintf("%.2f", ((float64(length) - errDeduction) / (timeDelta / 60.0)))
 	return lipgloss.NewStyle().Foreground(styles.Colors.Orange).Render(wpm)
+
 }
 
 func (tt *TypeTest) GetTestSize() string {
 	styled := strings.Builder{}
+	testModeOptions := tt.GetTestModeSizeOptions()
 
-	styled.WriteString("Test Length: ")
+	if tt.Mode == utils.TimeTest {
+		styled.WriteString("Test Duration: ")
+	} else {
+		styled.WriteString("Test Length: ")
+	}
 
-	for _, size := range utils.TestSizes {
+	for _, size := range testModeOptions {
 		s := strconv.Itoa(size)
 		var color lipgloss.Color
 		if tt.Size == size {
@@ -140,4 +179,15 @@ func (tt *TypeTest) GetTestSize() string {
 	}
 
 	return styled.String()
+}
+
+func (tt *TypeTest) GetTestModeSizeOptions() utils.TestModesType {
+	switch tt.Mode {
+	case utils.WordsTest:
+		return utils.WordTestSizes
+	case utils.TimeTest:
+		return utils.TimeTestSizes
+	default:
+		return utils.WordTestSizes
+	}
 }

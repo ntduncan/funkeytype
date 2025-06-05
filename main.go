@@ -6,12 +6,14 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/bubbles/timer"
 	"github.com/charmbracelet/bubbles/viewport"
 	tea "github.com/charmbracelet/bubbletea"
 	lipgloss "github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/wordwrap"
 	"ntduncan.com/typer/styles"
 	typetest "ntduncan.com/typer/type-test"
+	"ntduncan.com/typer/utils"
 )
 
 type Model struct {
@@ -22,8 +24,8 @@ type Model struct {
 
 var BestWPM string = ""
 
-func InitModel(width int, height int, size int) Model {
-	tt := typetest.New(size)
+func InitModel(width int, height int, size int, mode utils.TestMode) Model {
+	tt := typetest.New(size, mode)
 
 	m := Model{
 		cursor:   0,
@@ -39,6 +41,8 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.String() {
@@ -46,31 +50,53 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 		case "tab":
 			//restart
-			m = InitModel(m.viewport.Width, m.viewport.Height, m.test.Size)
+			m = InitModel(m.viewport.Width, m.viewport.Height, m.test.Size, m.test.Mode)
 		case "+", "plus":
 			var newSize int
+			options := m.test.GetTestModeSizeOptions()
 
-			switch m.test.Size {
-			case 10:
-				newSize = 25
-			case 25:
-				newSize = 50
-			case 50:
-				newSize = 100
-			default:
-				newSize = 10
+			for i, size := range options {
+				if i == 3 {
+					newSize = options[0]
+					break
+				}
+
+				if m.test.Size == size {
+					newSize = options[i+1]
+					break
+				}
 			}
-			m = InitModel(m.viewport.Width, m.viewport.Height, newSize)
+
+			m = InitModel(m.viewport.Width, m.viewport.Height, newSize, m.test.Mode)
+		case "=":
+			newMode := utils.WordsTest
+
+			if m.test.Mode == utils.WordsTest {
+				newMode = utils.TimeTest
+			}
+
+			options := utils.WordTestSizes
+			if newMode == utils.TimeTest {
+				options = utils.TimeTestSizes
+			}
+
+			m = InitModel(m.viewport.Width, m.viewport.Height, options[0], newMode)
+
 		case "backspace":
-			if m.cursor > 0 && m.cursor < len(m.test.Params) {
+			if m.cursor > 0 && m.cursor < len(m.test.Params) && (m.test.EndTime == time.Time{}) {
 				m.test.Params[m.cursor].Input = ""
 				m.test.Params[m.cursor].IsValid = false
 				m.cursor--
 			}
 
 		default:
+			if m.test.Mode == utils.TimeTest && m.test.StartTime.IsZero() {
+				cmd = m.test.TestTimer.Start()
+			}
+
 			//Handle normal keypress
-			if m.test.EndTime.IsZero() && m.cursor != len(m.test.Params) {
+			if (m.test.EndTime.IsZero()) &&
+				m.cursor != len(m.test.Params) {
 				m.test.HandleKeyPress(msg.String(), m.cursor)
 				if m.cursor != len(m.test.Params)-1 {
 					m.cursor++
@@ -80,9 +106,17 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.viewport.Height = msg.Height
 		m.viewport.Width = msg.Width
+
+	case timer.StartStopMsg:
+		m.test.TestTimer, cmd = m.test.TestTimer.Update(msg)
+	case timer.TickMsg:
+		m.test.TestTimer, cmd = m.test.TestTimer.Update(msg)
+	case timer.TimeoutMsg:
+		m.test.TestTimer, cmd = m.test.TestTimer.Update(msg)
+		m.test.EndTest()
 	}
 
-	return m, nil
+	return m, cmd
 }
 
 func (m Model) View() string {
@@ -100,8 +134,8 @@ func (m Model) View() string {
 	wpm := m.test.GetWPM()
 	wpmStyled := lipgloss.
 		NewStyle().
-		Width(m.viewport.Width).
-		Align(lipgloss.Center).
+		Align(lipgloss.Left).
+		Padding(0, 1, 0, 0).
 		Render("WPM: " + wpm)
 
 	if wpm > BestWPM {
@@ -115,11 +149,37 @@ func (m Model) View() string {
 
 	testLen := lipgloss.NewStyle().
 		Bold(true).
-		BorderRight(true).
+		BorderLeft(true).
 		BorderStyle(lipgloss.DoubleBorder()).
-		Padding(0, 1, 0, 0).
+		Padding(0, 1).
 		Margin(0, 1).
 		Render(m.test.GetTestSize())
+
+	timer := lipgloss.
+		NewStyle().
+		Align(lipgloss.Left).
+		Padding(0, 1, 0, 0).
+		Render("| Time", m.test.TestTimer.View())
+
+	subBar := "Top Score: " + bestWPMStyled + " | " + wpmStyled
+
+	if m.test.Mode == utils.TimeTest {
+		subBar += timer
+	}
+
+	subBar = lipgloss.
+		NewStyle().
+		Padding(0, 3).
+		Render(subBar)
+
+	mode := "Words"
+	if m.test.Mode == utils.TimeTest {
+		mode = "Timed"
+	}
+
+	modeStyled := lipgloss.NewStyle().
+		Foreground(colors.Orange).
+		Render(mode)
 
 	topBar := lipgloss.
 		NewStyle().
@@ -127,7 +187,7 @@ func (m Model) View() string {
 		Width(m.viewport.Width-2).
 		Border(lipgloss.DoubleBorder()).
 		Padding(0, 1).
-		Render(title + testLen + "Top Score: " + bestWPMStyled)
+		Render(title + "Mode: " + modeStyled + testLen)
 
 	body := ""
 
@@ -166,7 +226,7 @@ func (m Model) View() string {
 		Render(body)
 
 	f := wordwrap.String(body, m.viewport.Width-10)
-	m.viewport.SetContent(fmt.Sprintf("%v\n%v\n\n%v\n\n\n%v", topBar, wpmStyled, f, m.footer()))
+	m.viewport.SetContent(fmt.Sprintf("%v\n%v\n\n%v\n\n\n%v", topBar, subBar, f, m.footer()))
 
 	return m.viewport.View()
 }
@@ -179,7 +239,7 @@ func (m Model) footer() string {
 		Width(m.viewport.Width - 2).
 		Border(lipgloss.DoubleBorder()).
 		Foreground(lipgloss.Color("#A7A7A7")).
-		Render("\"esc\": Exit | \"tab\": New Test | \"+\": Test Length |")
+		Render("\"esc\": Exit | \"tab\": New Test | \"+\": Test Length | \"=\": Toggle Mode")
 
 	f.WriteString(cmdMenu)
 
@@ -187,7 +247,7 @@ func (m Model) footer() string {
 }
 
 func main() {
-	p := tea.NewProgram(InitModel(10, 10, 10), tea.WithAltScreen())
+	p := tea.NewProgram(InitModel(10, 10, 10, utils.WordsTest), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Exited with error: %s", err)
 		os.Exit(1)
