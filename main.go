@@ -12,6 +12,7 @@ import (
 	lipgloss "github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/wordwrap"
 	"ntduncan.com/typer/styles"
+	"ntduncan.com/typer/system"
 	typetest "ntduncan.com/typer/type-test"
 	"ntduncan.com/typer/utils"
 )
@@ -47,6 +48,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch msg.String() {
 		case "esc", "ctrl+c":
+			config := system.Config{
+				Size:     m.test.Size,
+				Mode:     m.test.Mode,
+				TopScore: BestWPM,
+			}
+			if err := system.SaveConfig(config); err != nil {
+				panic(fmt.Sprintf("There was an error saving your configuration: %s", err))
+			}
+
+			/* @NOTE:
+			 *  Have a global to track confirmQuit.
+			 *  This cmd will now change the body UI to a quit dialog.
+			 *  Add an 'enter' cmd that actually quits the program
+			 */
+
 			return m, tea.Quit
 		case "tab":
 			//restart
@@ -247,7 +263,15 @@ func (m Model) footer() string {
 }
 
 func main() {
-	p := tea.NewProgram(InitModel(10, 10, 10, utils.WordsTest), tea.WithAltScreen())
+	config, configErr := system.LoadConfig()
+	if configErr != nil {
+		//@TODO: Add error file writing to .cofig/funkeytype
+		panic("There was an error loading your config")
+	}
+
+	BestWPM = config.TopScore
+
+	p := tea.NewProgram(InitModel(10, 10, config.Size, config.Mode), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		fmt.Printf("Exited with error: %s", err)
 		os.Exit(1)
