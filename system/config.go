@@ -3,7 +3,7 @@ package system
 import "ntduncan.com/typer/utils"
 
 type Config struct {
-	TopScore string
-	Mode     utils.TestMode
-	Size     int
+	TopScore string         `json:"TopScore"`
+	Mode     utils.TestMode `json:"Mode"`
+	Size     int            `json:"Size"`
 }

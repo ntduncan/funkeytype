@@ -11,6 +11,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	lipgloss "github.com/charmbracelet/lipgloss"
 	"github.com/muesli/reflow/wordwrap"
+
 	"ntduncan.com/typer/styles"
 	"ntduncan.com/typer/system"
 	typetest "ntduncan.com/typer/type-test"
@@ -265,8 +266,7 @@ func (m Model) footer() string {
 func main() {
 	config, configErr := system.LoadConfig()
 	if configErr != nil {
-		//@TODO: Add error file writing to .cofig/funkeytype
-		panic("There was an error loading your config")
+		panic(configErr)
 	}
 
 	BestWPM = config.TopScore
