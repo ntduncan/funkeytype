@@ -22,7 +22,7 @@ type Model struct {
 	test     typetest.TypeTest
 }
 
-var BestWPM string = ""
+var BestWPM float64 = 0.00
 
 func InitModel(width int, height int, size int, mode utils.TestMode) Model {
 	tt := typetest.New(size, mode)
@@ -131,13 +131,13 @@ func (m Model) View() string {
 		Margin(0, 1).
 		Render("FunKeyType")
 
-	wpm := m.test.GetWPM()
 	wpmStyled := lipgloss.
 		NewStyle().
 		Align(lipgloss.Left).
 		Padding(0, 1, 0, 0).
-		Render("WPM: " + wpm)
+		Render("WPM: " + m.test.GetWPMStyled())
 
+	wpm := m.test.GetWPM()
 	if wpm > BestWPM {
 		BestWPM = wpm
 	}
@@ -145,7 +145,7 @@ func (m Model) View() string {
 	bestWPMStyled := lipgloss.
 		NewStyle().
 		Foreground(colors.Orange).
-		Render(BestWPM)
+		Render(fmt.Sprintf("%.2f", BestWPM))
 
 	testLen := lipgloss.NewStyle().
 		Bold(true).
@@ -193,16 +193,17 @@ func (m Model) View() string {
 
 	correct := lipgloss.NewStyle().Foreground(lipgloss.Color("#85DEAD"))
 	incorrect := lipgloss.NewStyle().Foreground(colors.White).Background(lipgloss.Color(colors.Red))
-	blockCursor := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFF")).Background(colors.Black)
-	lineCursor := lipgloss.NewStyle().Underline(true)
+	endBlockCursor := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFF")).Background(colors.Black)
+	blockCursor := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFF")).Background(colors.Orange)
+	//lineCursor := lipgloss.NewStyle().Underline(true)
 	blank := lipgloss.NewStyle()
 
 	for i, p := range m.test.Params {
 		if i == m.cursor {
-			if (m.test.EndTime != time.Time{}) {
+			if !m.test.EndTime.IsZero() {
 				body += blockCursor.Render(p.Char)
 			} else {
-				body += lineCursor.Render(p.Char)
+				body += endBlockCursor.Render(p.Char)
 			}
 			continue
 		} else if p.IsValid {

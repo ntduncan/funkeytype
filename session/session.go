@@ -11,4 +11,3 @@ func (s *Session) SetSessionBest(newVal string) {
 func (s *Session) GetSessionBest() string {
 	return s.sessionBest
 }
-
