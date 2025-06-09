@@ -111,11 +111,10 @@ func (tt *TypeTest) EndTest() {
 	tt.EndTime = time.Now()
 }
 
-func (tt *TypeTest) GetWPM() string {
+func (tt *TypeTest) GetWPM() float64 {
 	if tt.EndTime.IsZero() {
-		return ""
+		return 0.00
 	}
-
 	numOfErrs := 0
 	for _, i := range tt.Params {
 		if tt.Mode == utils.TimeTest && i.Input == "" {
@@ -127,7 +126,7 @@ func (tt *TypeTest) GetWPM() string {
 		}
 	}
 
-	var wpm string
+	var wpm float64
 	errDeduction := float64(numOfErrs / 60.0)
 	length := 0
 
@@ -148,9 +147,16 @@ func (tt *TypeTest) GetWPM() string {
 	timeDelta := tt.EndTime.Sub(tt.StartTime).Seconds()
 
 	// WPM = (number of words / time in minutes)
-	wpm = fmt.Sprintf("%.2f", ((float64(length) - errDeduction) / (timeDelta / 60.0)))
-	return lipgloss.NewStyle().Foreground(styles.Colors.Orange).Render(wpm)
+	wpm = ((float64(length) - errDeduction) / (timeDelta / 60.0))
+	return wpm
+}
 
+func (tt *TypeTest) GetWPMStyled() string {
+	if tt.EndTime.IsZero() {
+		return ""
+	}
+
+	return lipgloss.NewStyle().Foreground(styles.Colors.Orange).Render(fmt.Sprintf("%.2f", tt.GetWPM()))
 }
 
 func (tt *TypeTest) GetTestSize() string {
