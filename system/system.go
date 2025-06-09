@@ -53,7 +53,7 @@ func initConfig() error {
 	defaultConfig := Config{
 		Size:     10,
 		Mode:     utils.WordsTest,
-		TopScore: "0.00",
+		TopScore: 0.00,
 	}
 
 	// Get user's home directory

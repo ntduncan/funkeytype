@@ -25,6 +25,7 @@ type Model struct {
 }
 
 var BestWPM float64 = 0.00
+var isConfirmQuit = false
 
 func InitModel(width int, height int, size int, mode utils.TestMode) Model {
 	tt := typetest.New(size, mode)
