@@ -229,40 +229,48 @@ func (m Model) View() string {
 
 	body := ""
 
-	correct := lipgloss.NewStyle().Foreground(lipgloss.Color("#85DEAD"))
-	incorrect := lipgloss.NewStyle().Foreground(colors.White).Background(lipgloss.Color(colors.Red))
-	endBlockCursor := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFF")).Background(colors.Black)
-	blockCursor := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFF")).Background(colors.Orange)
-	//lineCursor := lipgloss.NewStyle().Underline(true)
-	blank := lipgloss.NewStyle()
+	if isConfirmQuit {
+		body = lipgloss.
+			NewStyle().
+			Height(m.viewport.Height - 10).
+			Width(m.viewport.Width - 2).
+			Align(lipgloss.Center).Render("Quit Funkeytype? (Y)es or (N)o")
+	} else {
+		correct := lipgloss.NewStyle().Foreground(lipgloss.Color("#85DEAD"))
+		incorrect := lipgloss.NewStyle().Foreground(colors.White).Background(lipgloss.Color(colors.Red))
+		endBlockCursor := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFF")).Background(colors.Black)
+		blockCursor := lipgloss.NewStyle().Foreground(lipgloss.Color("#FFF")).Background(colors.Orange)
+		//lineCursor := lipgloss.NewStyle().Underline(true)
+		blank := lipgloss.NewStyle()
 
-	for i, p := range m.test.Params {
-		if i == m.cursor {
-			if !m.test.EndTime.IsZero() {
-				body += blockCursor.Render(p.Char)
+		for i, p := range m.test.Params {
+			if i == m.cursor {
+				if !m.test.EndTime.IsZero() {
+					body += blockCursor.Render(p.Char)
+				} else {
+					body += endBlockCursor.Render(p.Char)
+				}
+				continue
+			} else if p.IsValid {
+				body += correct.Render(p.Char)
+				continue
+			} else if !p.IsValid && p.Input != "" {
+				body += incorrect.Render(p.Char)
+				continue
 			} else {
-				body += endBlockCursor.Render(p.Char)
+				body += blank.Render(p.Char)
+				continue
 			}
-			continue
-		} else if p.IsValid {
-			body += correct.Render(p.Char)
-			continue
-		} else if !p.IsValid && p.Input != "" {
-			body += incorrect.Render(p.Char)
-			continue
-		} else {
-			body += blank.Render(p.Char)
-			continue
 		}
-	}
 
-	body = lipgloss.
-		NewStyle().
-		Height(m.viewport.Height-10).
-		Width(m.viewport.Width-2).
-		Align(lipgloss.Left).
-		Padding(0, 10).
-		Render(body)
+		body = lipgloss.
+			NewStyle().
+			Height(m.viewport.Height-10).
+			Width(m.viewport.Width-2).
+			Align(lipgloss.Left).
+			Padding(0, 10).
+			Render(body)
+	}
 
 	f := wordwrap.String(body, m.viewport.Width-10)
 	m.viewport.SetContent(fmt.Sprintf("%v\n%v\n\n%v\n\n\n%v", topBar, subBar, f, m.footer()))
@@ -272,7 +280,6 @@ func (m Model) View() string {
 
 func (m Model) footer() string {
 	f := strings.Builder{}
-
 	cmdMenu := lipgloss.
 		NewStyle().
 		Width(m.viewport.Width - 2).
