@@ -26,9 +26,18 @@ type Model struct {
 
 var BestWPM float64 = 0.00
 var isConfirmQuit = false
+var Config system.Config
 
 func InitModel(width int, height int, size int, mode utils.TestMode) Model {
 	tt := typetest.New(size, mode)
+	Config.Mode = mode
+	Config.Size = size
+
+	modeTopScore, err := Config.GetTopScore()
+	if err != nil {
+		panic(err)
+	}
+	BestWPM = modeTopScore
 
 	m := Model{
 		cursor:   0,
@@ -53,9 +62,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if isConfirmQuit {
 
 				config := system.Config{
-					Size:     m.test.Size,
-					Mode:     m.test.Mode,
-					TopScore: BestWPM,
+					Size:      m.test.Size,
+					Mode:      m.test.Mode,
+					TopScores: Config.TopScores,
 				}
 				if err := system.SaveConfig(config); err != nil {
 					panic(fmt.Sprintf("There was an error saving your configuration: %s", err))
@@ -112,9 +121,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if msg.String() == "y" || msg.String() == "Y" || msg.String() == "enter" {
 
 					config := system.Config{
-						Size:     m.test.Size,
-						Mode:     m.test.Mode,
-						TopScore: BestWPM,
+						Size:      m.test.Size,
+						Mode:      m.test.Mode,
+						TopScores: Config.TopScores,
 					}
 					if err := system.SaveConfig(config); err != nil {
 						panic(fmt.Sprintf("There was an error saving your configuration: %s", err))
@@ -178,6 +187,7 @@ func (m Model) View() string {
 	wpm := m.test.GetWPM()
 	if wpm > BestWPM {
 		BestWPM = wpm
+		Config.UpdateTopScore(wpm)
 	}
 
 	bestWPMStyled := lipgloss.
@@ -298,7 +308,7 @@ func main() {
 		panic(configErr)
 	}
 
-	BestWPM = config.TopScore
+	Config = config
 
 	p := tea.NewProgram(InitModel(10, 10, config.Size, config.Mode), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {

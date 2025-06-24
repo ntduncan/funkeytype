@@ -51,9 +51,12 @@ func SaveConfig(config Config) error {
 // Initialize new .config/funkeytype/config.json?
 func initConfig() error {
 	defaultConfig := Config{
-		Size:     10,
-		Mode:     utils.WordsTest,
-		TopScore: 0.00,
+		Size: 10,
+		Mode: utils.WordsTest,
+		TopScores: TopScoreMap{
+			TimeScores: [4]float64{0, 0, 0, 0},
+			WordScores: [4]float64{0, 0, 0, 0},
+		},
 	}
 
 	// Get user's home directory
