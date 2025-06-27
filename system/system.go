@@ -13,9 +13,9 @@ import (
 
 func getConfigPath() string {
 	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		panic(fmt.Sprintf("error getting home directory: %v", err))
-	}
+	//if err != nil {
+	CurrentSession.LogErrorAndExit(fmt.Errorf("error getting home directory: %v", err))
+	//}
 
 	// Build proper paths
 	appDir := filepath.Join(homeDir, ".config", "funkeytype")
