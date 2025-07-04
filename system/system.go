@@ -19,7 +19,7 @@ func getConfigPath() string {
 
 	// Build proper paths
 	appDir := filepath.Join(homeDir, ".config", "funkeytype")
-	configPath := filepath.Join(appDir, "config.json")
+	configPath := filepath.Join(appDir, "scores.json")
 
 	return configPath
 }
@@ -48,7 +48,7 @@ func SaveConfig(config Config) error {
 }
 
 // Creates new .config/funkeytype path
-// Initialize new .config/funkeytype/config.json?
+// Initialize new .config/funkeytype/scores.json?
 func initConfig() error {
 	defaultConfig := Config{
 		Size: 10,
@@ -68,7 +68,7 @@ func initConfig() error {
 	// Build proper paths
 	configDir := filepath.Join(homeDir, ".config")
 	appDir := filepath.Join(homeDir, ".config", "funkeytype")
-	configPath := filepath.Join(appDir, "config.json") // Assuming config filename
+	configPath := filepath.Join(appDir, "scores.json") // Assuming config filename
 
 	// Create .config directory if it doesn't exist
 	if !checkIfDirExists(configDir) {

@@ -303,26 +303,6 @@ func (m Model) footer() string {
 }
 
 func main() {
-	/* Setup logging file path and directory at the start.
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "critical: unable to find user home directory: %v\n", err)
-		os.Exit(1)
-	}
-	logDir := filepath.Join(homeDir, ".config", "funkeytype", "logs")
-
-	// Create the log directory if it doesn't exist.
-	// 0755 gives rwx for owner, rx for group and others.
-	if err := os.MkdirAll(logDir, 0755); err != nil {
-		fmt.Fprintf(os.Stderr, "critical: unable to create log directory %s: %v\n", logDir, err)
-		os.Exit(1)
-	}
-
-	// Format the log file name with a timestamp.
-	logFileName := "funkeytype-log-" + time.Now().Format("2006-01-02_15-04-05") + ".log"
-	logFilePath = filepath.Join(logDir, logFileName)
-	*/
-
 	config, configErr := system.LoadConfig()
 	if configErr != nil {
 		system.CurrentSession.LogErrorAndExit(configErr)
