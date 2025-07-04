@@ -27,7 +27,7 @@ funkeytype
 
 FunkeyType creates a configuration file to store your top high scores.
 
--   **File Name:** `.scores.json`
+-   **File Name:** `scores.json`
 -   **Location:** The file is created in your home directory (`~/.config/funkeytype/scores.json`).
 
 The file is automatically created on your first run.
